@@ -1,0 +1,27 @@
+# Build cache for an Intel i5-9400F (Coffee Lake, Skylake ISA, AVX2, no AVX-512).
+# Same as tuned/pgo-use-cache.cmake except: -march/-mtune=skylake instead of x86-64-v3/generic,
+# and the LLVM location comes from the LLVM_ROOT environment variable (default C:/LLVM).
+# Use:  cmake -C tuned/pgo-use-cache-9400f.cmake -S . -B build/pgo-use -G Ninja
+if(DEFINED ENV{LLVM_ROOT})
+  set(_llvm "$ENV{LLVM_ROOT}")
+else()
+  set(_llvm "C:/LLVM")
+endif()
+set(PGO_FLAGS "-march=skylake -mtune=skylake /clang:-fprofile-use=${CMAKE_CURRENT_LIST_DIR}/eglantine.profdata /clang:-Wno-profile-instr-unprofiled /clang:-Wno-profile-instr-out-of-date /clang:-Wno-backend-plugin")
+set(CMAKE_BUILD_TYPE Release CACHE STRING "")
+set(CMAKE_C_COMPILER "${_llvm}/bin/clang-cl.exe" CACHE FILEPATH "")
+set(CMAKE_CXX_COMPILER "${_llvm}/bin/clang-cl.exe" CACHE FILEPATH "")
+set(CMAKE_LINKER "${_llvm}/bin/lld-link.exe" CACHE FILEPATH "")
+set(CMAKE_AR "${_llvm}/bin/llvm-lib.exe" CACHE FILEPATH "")
+set(CMAKE_C_FLAGS "/DWIN32 /D_WINDOWS ${PGO_FLAGS}" CACHE STRING "")
+set(CMAKE_CXX_FLAGS "/DWIN32 /D_WINDOWS /EHsc ${PGO_FLAGS}" CACHE STRING "")
+set(CMAKE_EXE_LINKER_FLAGS "/machine:x64" CACHE STRING "")
+set(ENABLE_LTO ON CACHE BOOL "")
+set(BUILD_TESTING OFF CACHE BOOL "")
+set(YUZU_TESTS OFF CACHE BOOL "")
+set(YUZU_CMD OFF CACHE BOOL "")
+set(YUZU_ROOM OFF CACHE BOOL "")
+set(YUZU_ROOM_STANDALONE OFF CACHE BOOL "")
+set(YUZU_USE_BUNDLED_SDL3 ON CACHE BOOL "")
+set(ENABLE_UPDATE_CHECKER OFF CACHE BOOL "")
+set(USE_DISCORD_PRESENCE OFF CACHE BOOL "")
