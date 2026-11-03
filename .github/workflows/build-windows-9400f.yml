@@ -5,8 +5,11 @@ on:
   workflow_dispatch:
     inputs:
       llvm_version:
-        description: "LLVM/Clang version. The bundled profile was made with Clang 23.x; older Clang may reject it."
+        description: "LLVM/Clang version to download. The bundled profile needs the same Clang major version it was made with (23.x)."
         default: "23.1.4"
+      use_pgo:
+        description: "Use the bundled profile (true), or build without it (false) if Clang 23 can't be installed."
+        default: "true"
 jobs:
   build:
     runs-on: windows-latest
@@ -18,10 +21,21 @@ jobs:
       - name: Install LLVM, Ninja
         shell: pwsh
         run: |
-          choco install llvm --version=${{ inputs.llvm_version }} -y --no-progress
           choco install ninja -y --no-progress
-          echo "LLVM_ROOT=C:/Program Files/LLVM" >> $env:GITHUB_ENV
-          echo "C:\Program Files\LLVM\bin" >> $env:GITHUB_PATH
+          if ("${{ inputs.use_pgo }}" -eq "false") {
+            echo "USE_PGO=0" >> $env:GITHUB_ENV
+            echo "LLVM_ROOT=C:/Program Files/LLVM" >> $env:GITHUB_ENV   # runner's preinstalled LLVM
+          } else {
+            $v = "${{ inputs.llvm_version }}"
+            $url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-$v/LLVM-$v-win64.exe"
+            Invoke-WebRequest -Uri $url -OutFile llvm.exe -ErrorAction Stop
+            Start-Process -FilePath .\llvm.exe -ArgumentList "/S","/D=C:\LLVM23" -Wait
+            $ver = & C:\LLVM23\bin\clang-cl.exe --version | Select-Object -First 1
+            echo $ver
+            if ($ver -notmatch "version 23") { throw "Expected Clang 23, got: $ver" }
+            echo "LLVM_ROOT=C:/LLVM23" >> $env:GITHUB_ENV
+            echo "C:\LLVM23\bin" >> $env:GITHUB_PATH
+          }
           echo "C:\Program Files\Git\usr\bin" >> $env:GITHUB_PATH   # provides 'patch'
       - name: Install Vulkan SDK (glslangValidator)
         shell: pwsh
