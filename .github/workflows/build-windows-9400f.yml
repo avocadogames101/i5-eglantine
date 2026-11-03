@@ -18,6 +18,30 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Restore src/audio_core/out (missing from this repo because .gitignore has "out/")
+        shell: pwsh
+        run: |
+          $dest = "src/audio_core/out"
+          if (-not (Test-Path "$dest/audio_out.cpp")) {
+            $tries = @(
+              @("https://github.com/zortos293/Eglantine.git", "nx2-build31-20261101"),
+              @("https://github.com/zortos293/Eglantine.git", ""),
+              @("https://github.com/Djihads80/Eglantine.git", "")
+            )
+            $i = 0
+            foreach ($t in $tries) {
+              $i++
+              $d = "_up$i"
+              if ($t[1]) { git clone --depth 1 --branch $t[1] $t[0] $d } else { git clone --depth 1 $t[0] $d }
+              if ($LASTEXITCODE -eq 0 -and (Test-Path "$d/src/audio_core/out/audio_out.cpp")) {
+                Copy-Item "$d/src/audio_core/out" $dest -Recurse
+                break
+              }
+            }
+          }
+          if (-not (Test-Path "$dest/audio_out.cpp")) { throw "Could not find src/audio_core/out/ in any upstream repo. Add those 4 files to your repo by hand." }
+          Get-ChildItem $dest
+          $global:LASTEXITCODE = 0
       - name: Install LLVM, Ninja
         shell: pwsh
         env:
