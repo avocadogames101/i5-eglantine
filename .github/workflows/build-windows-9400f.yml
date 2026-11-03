@@ -1,0 +1,56 @@
+# Builds the emulator on GitHub's Windows runner with Skylake flags. UNTESTED: see README-9400F.md.
+# Put this file in .github/workflows/ of YOUR FORK of the selevet-eglantine repo, then run it from the Actions tab.
+name: build-windows-9400f
+on:
+  workflow_dispatch:
+    inputs:
+      llvm_version:
+        description: "LLVM/Clang version. The bundled profile was made with Clang 23.x; older Clang may reject it."
+        default: "23.1.4"
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install LLVM, Ninja
+        shell: pwsh
+        run: |
+          choco install llvm --version=${{ inputs.llvm_version }} -y --no-progress
+          choco install ninja -y --no-progress
+          echo "LLVM_ROOT=C:/Program Files/LLVM" >> $env:GITHUB_ENV
+          echo "C:\Program Files\LLVM\bin" >> $env:GITHUB_PATH
+          echo "C:\Program Files\Git\usr\bin" >> $env:GITHUB_PATH   # provides 'patch'
+      - name: Install Vulkan SDK (glslangValidator)
+        shell: pwsh
+        run: |
+          choco install vulkan-sdk -y --no-progress
+          $sdk = (Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending | Select-Object -First 1).FullName
+          echo "$sdk\Bin" >> $env:GITHUB_PATH
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Check tools
+        shell: pwsh
+        run: |
+          clang-cl --version
+          glslangValidator --version
+          patch --version
+      - name: Configure
+        shell: pwsh
+        run: cmake -C tuned/pgo-use-cache-9400f.cmake -S . -B build/pgo-use -G Ninja
+      - name: Build
+        shell: pwsh
+        run: cmake --build build/pgo-use --target yuzu
+      - name: Collect output
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item build/pgo-use/bin/* out/ -Recurse -Force
+          Copy-Item tuned/nx2_switches-9400f.txt out/nx2_switches.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eglantine-9400f
+          path: out
