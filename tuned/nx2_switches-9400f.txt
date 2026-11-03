@@ -1,0 +1,7 @@
+# Put this beside eglantine.exe as nx2_switches.txt (or copy lines into %APPDATA%\eden\nx2_switches.txt).
+# Unsafe shortcut from the selevet build. Delete the line if you get glitches.
+EDEN_NX2_UNSAFE_PREEMPTIVE_READS=1
+# 30 fps cap. Delete this line to go back to 60. On a 6-thread CPU a steady 30 usually feels better than 20-40.
+EDEN_NX2_PRESENT_HZ=30
+# Frees a little CPU for the emulator threads. The author found no speed difference from high priority.
+EDEN_NX2_HIGH_PRIORITY=0
